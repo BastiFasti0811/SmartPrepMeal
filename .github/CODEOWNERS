@@ -1,0 +1,8 @@
+# Global default owner
+* @BastiFasti0811
+
+# Security and workflow critical paths
+/.github/ @BastiFasti0811
+/app/security.py @BastiFasti0811
+/app/offers/ @BastiFasti0811
+/scripts/ @BastiFasti0811
