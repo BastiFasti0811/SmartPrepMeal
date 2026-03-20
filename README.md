@@ -73,6 +73,8 @@ python -m app.automation --output-dir exports --offer-mode auto
 - Dependabot Updates: `.github/dependabot.yml`
 - CodeQL SAST Scan: `.github/workflows/codeql.yml`
 - CI Test-Gate: `.github/workflows/ci.yml`
+- PR Quality Gate (Ruff, Bandit, pip-audit): `.github/workflows/pr-quality.yml`
+- Optionale AI-PR-Reviews (Gemini/OpenAI): `.github/workflows/ai-pr-review.yml`
 
 ## UX-Verbesserungen im MVP
 

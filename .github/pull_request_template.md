@@ -15,7 +15,8 @@
 
 - [ ] `python -m pytest -q` passes locally
 - [ ] Manual run tested (`python -m app.automation --output-dir exports --offer-mode auto`)
-- [ ] CI workflow passed (`CI / test`)
+- [ ] CI workflow passed (`test`)
+- [ ] PR Quality workflow passed (`Lint + Security`)
 
 ## SmartMeal Rule Checks
 
