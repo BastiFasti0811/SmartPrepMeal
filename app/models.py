@@ -84,6 +84,29 @@ class PlanMetrics:
 
 
 @dataclass(slots=True)
+class HouseholdComposition:
+    babies: int = 0
+    toddlers: int = 0
+    children: int = 0
+    teenagers: int = 0
+    adults: int = 0
+
+    @property
+    def total_people(self) -> int:
+        return self.babies + self.toddlers + self.children + self.teenagers + self.adults
+
+    @property
+    def weighted_units(self) -> float:
+        return (
+            self.babies * 0.35
+            + self.toddlers * 0.55
+            + self.children * 0.8
+            + self.teenagers * 1.15
+            + self.adults * 1.0
+        )
+
+
+@dataclass(slots=True)
 class WeeklyPlan:
     start_date: date
     end_date: date
@@ -94,4 +117,6 @@ class WeeklyPlan:
     quality_checks: dict[str, bool]
     offers_source: str
     offers_count: int
+    region: str = "Bundesweit"
+    household: HouseholdComposition = field(default_factory=HouseholdComposition)
     import_warnings: list[str] = field(default_factory=list)

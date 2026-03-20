@@ -41,3 +41,42 @@ def test_plan_exposes_offer_source_metadata():
     plan = generate_weekly_plan(PlannerInput(week_start=date(2026, 3, 23), offer_mode="seed"))
     assert plan.offers_source == "seed"
     assert plan.offers_count > 0
+
+
+def test_household_composition_overrides_family_size_and_is_exposed():
+    plan = generate_weekly_plan(
+        PlannerInput(
+            family_size=2,
+            adults=2,
+            teenagers=1,
+            children=1,
+            week_start=date(2026, 3, 23),
+            offer_mode="seed",
+        )
+    )
+    assert plan.metrics.family_size == 4
+    assert plan.household.adults == 2
+    assert plan.household.teenagers == 1
+    assert plan.household.children == 1
+
+
+def test_region_factor_changes_total_cost():
+    metro = generate_weekly_plan(
+        PlannerInput(
+            week_start=date(2026, 3, 23),
+            offer_mode="seed",
+            region="metropole",
+            adults=2,
+            children=2,
+        )
+    )
+    rural = generate_weekly_plan(
+        PlannerInput(
+            week_start=date(2026, 3, 23),
+            offer_mode="seed",
+            region="laendlich",
+            adults=2,
+            children=2,
+        )
+    )
+    assert metro.metrics.weekly_cost_eur > rural.metrics.weekly_cost_eur
