@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from app.data.seed_data import get_recipe_catalog, get_seed_offers
 from app.models import (
     DayMeals,
+    HouseholdComposition,
     MealKind,
     OfferItem,
     PlanMetrics,
@@ -24,6 +25,15 @@ from app.offers.live_importer import load_offers
 DAY_NAMES = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
 STORE_ORDER = [Store.LIDL, Store.ALDI_SUED, Store.NETTO, Store.KAUFLAND, Store.SONSTIGES]
 BANNED_WORDS = {"schwein", "speck", "bacon", "schinken", "wurst", "pork"}
+REGIONAL_PRICE_FACTOR = {
+    "bundesweit": 1.00,
+    "nord": 1.01,
+    "west": 1.03,
+    "ost": 0.98,
+    "sued": 1.04,
+    "metropole": 1.10,
+    "laendlich": 0.95,
+}
 
 
 @dataclass(slots=True)
@@ -34,6 +44,12 @@ class PlannerInput:
     week_start: date | None = None
     preferred_stores: set[Store] | None = None
     offer_mode: str = "auto"
+    region: str = "bundesweit"
+    babies: int = 0
+    toddlers: int = 0
+    children: int = 0
+    teenagers: int = 0
+    adults: int = 0
 
 
 def next_monday(today: date) -> date:
@@ -153,7 +169,8 @@ def _build_shopping_list(
     offers: list[OfferItem],
     week_start: date,
     week_end: date,
-    family_size: int,
+    household_units: float,
+    regional_factor: float,
 ) -> tuple[dict[Store, list[ShoppingEntry]], float, float, float]:
     ingredient_usage: dict[str, list[str]] = defaultdict(list)
     ingredient_count: dict[str, int] = defaultdict(int)
@@ -170,7 +187,7 @@ def _build_shopping_list(
     grouped: dict[Store, list[ShoppingEntry]] = {store: [] for store in STORE_ORDER}
     weekly_cost = 0.0
     weekly_regular = 0.0
-    person_factor = family_size / 4
+    person_factor = household_units / 4
 
     for ingredient, uses in ingredient_usage.items():
         matching_offers = [
@@ -183,8 +200,8 @@ def _build_shopping_list(
         if matching_offers:
             best = min(matching_offers, key=lambda offer: offer.sale_price_eur)
             offer_matched_ingredients += ingredient_count[ingredient]
-            sale = round(best.sale_price_eur * amount_multiplier, 2)
-            regular = round(best.regular_price_eur * amount_multiplier, 2)
+            sale = round(best.sale_price_eur * amount_multiplier * regional_factor, 2)
+            regular = round(best.regular_price_eur * amount_multiplier * regional_factor, 2)
             entry = ShoppingEntry(
                 ingredient=ingredient,
                 amount=f"ca. {math.ceil(amount_multiplier)}x",
@@ -197,8 +214,8 @@ def _build_shopping_list(
             )
             grouped[best.store].append(entry)
         else:
-            fallback_sale = round(1.49 * amount_multiplier, 2)
-            fallback_regular = round(1.89 * amount_multiplier, 2)
+            fallback_sale = round(1.49 * amount_multiplier * regional_factor, 2)
+            fallback_regular = round(1.89 * amount_multiplier * regional_factor, 2)
             entry = ShoppingEntry(
                 ingredient=ingredient,
                 amount=f"ca. {math.ceil(amount_multiplier)}x",
@@ -219,6 +236,26 @@ def _build_shopping_list(
 
     offer_usage = offer_matched_ingredients / total_ingredients if total_ingredients else 0.0
     return grouped, round(weekly_cost, 2), round(weekly_regular, 2), offer_usage
+
+
+def _normalize_region(value: str) -> str:
+    cleaned = normalize_text(value)
+    return cleaned if cleaned in REGIONAL_PRICE_FACTOR else "bundesweit"
+
+
+def _resolve_household(input_data: PlannerInput) -> HouseholdComposition:
+    if any([input_data.babies, input_data.toddlers, input_data.children, input_data.teenagers, input_data.adults]):
+        household = HouseholdComposition(
+            babies=input_data.babies,
+            toddlers=input_data.toddlers,
+            children=input_data.children,
+            teenagers=input_data.teenagers,
+            adults=input_data.adults,
+        )
+        if household.total_people > 0:
+            return household
+
+    return HouseholdComposition(adults=max(1, input_data.family_size))
 
 
 def _quality_checks(
@@ -263,6 +300,10 @@ def _quality_checks(
 def generate_weekly_plan(input_data: PlannerInput) -> WeeklyPlan:
     week_start = input_data.week_start or next_monday(date.today())
     week_end = week_start + timedelta(days=6)
+    normalized_region = _normalize_region(input_data.region)
+    regional_factor = REGIONAL_PRICE_FACTOR[normalized_region]
+    household = _resolve_household(input_data)
+    family_size = household.total_people
 
     if input_data.offer_mode.lower().strip() == "seed":
         offers = get_seed_offers(week_start)
@@ -299,7 +340,8 @@ def generate_weekly_plan(input_data: PlannerInput) -> WeeklyPlan:
         offers=offers,
         week_start=week_start,
         week_end=week_end,
-        family_size=input_data.family_size,
+        household_units=household.weighted_units,
+        regional_factor=regional_factor,
     )
     savings = round(weekly_regular - weekly_cost, 2)
     savings_pct = round((savings / weekly_regular * 100.0), 1) if weekly_regular else 0.0
@@ -310,7 +352,7 @@ def generate_weekly_plan(input_data: PlannerInput) -> WeeklyPlan:
 
     quality = _quality_checks(days, shopping, offer_usage)
     metrics = PlanMetrics(
-        family_size=input_data.family_size,
+        family_size=family_size,
         budget_min_eur=input_data.budget_min_eur,
         budget_max_eur=input_data.budget_max_eur,
         weekly_cost_eur=weekly_cost,
@@ -331,6 +373,8 @@ def generate_weekly_plan(input_data: PlannerInput) -> WeeklyPlan:
         quality_checks=quality,
         offers_source=source,
         offers_count=len(offers),
+        region=normalized_region.capitalize() if normalized_region != "laendlich" else "Laendlich",
+        household=household,
         import_warnings=warnings,
     )
 
@@ -342,6 +386,12 @@ def weekly_plan_to_markdown(plan: WeeklyPlan) -> str:
     lines.append("## Angebotsquelle")
     lines.append(f"- Quelle: **{plan.offers_source}**")
     lines.append(f"- Anzahl importierte Angebote: **{plan.offers_count}**")
+    lines.append(f"- Region: **{plan.region}**")
+    lines.append(
+        "- Haushalt: "
+        f"{plan.household.adults} Erwachsene, {plan.household.teenagers} Jugendliche, "
+        f"{plan.household.children} Kinder, {plan.household.toddlers} Kleinkinder, {plan.household.babies} Babys"
+    )
     if plan.import_warnings:
         for warning in plan.import_warnings:
             lines.append(f"- Hinweis: {warning}")
