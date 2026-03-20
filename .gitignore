@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+*.log
+dist/
+build/
+exports/
+app/data/cache/
+weekly_plan.md

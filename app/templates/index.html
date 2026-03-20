@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}SmartMeal Planner{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Plan konfigurieren</h2>
+  <form action="/plan" method="post" class="grid-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <label for="family_size">Personenanzahl</label>
+    <input id="family_size" name="family_size" type="number" min="1" max="8" value="{{ defaults.family_size }}" required>
+
+    <label for="budget_min">Budget min (EUR)</label>
+    <input id="budget_min" name="budget_min" type="number" min="10" max="300" step="1" value="{{ defaults.budget_min }}" required>
+
+    <label for="budget_max">Budget max (EUR)</label>
+    <input id="budget_max" name="budget_max" type="number" min="10" max="300" step="1" value="{{ defaults.budget_max }}" required>
+
+    <label for="week_start">Wochenstart (Montag)</label>
+    <input id="week_start" name="week_start" type="date" value="{{ defaults.week_start }}" required>
+
+    <label for="offer_mode">Angebotsquelle</label>
+    <select id="offer_mode" name="offer_mode">
+      <option value="auto" {% if defaults.offer_mode == "auto" %}selected{% endif %}>Auto (Live + Fallback)</option>
+      <option value="live" {% if defaults.offer_mode == "live" %}selected{% endif %}>Nur Live</option>
+      <option value="seed" {% if defaults.offer_mode == "seed" %}selected{% endif %}>Nur Seed (Offline)</option>
+    </select>
+
+    <fieldset>
+      <legend>Bevorzugte Geschaefte</legend>
+      <div class="stores">
+        {% for store in store_options %}
+        <label class="check">
+          <input type="checkbox" name="stores" value="{{ store.value }}" {% if store.value in defaults.stores %}checked{% endif %}>
+          <span>{{ store.value }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <button type="submit" class="btn-primary">Wochenplan erstellen</button>
+  </form>
+  {% if error %}
+  <p class="error" role="alert">{{ error }}</p>
+  {% endif %}
+</section>
+
+{% if result %}
+<section class="panel">
+  <h2>Angebotsimport</h2>
+  <p><strong>Quelle:</strong> {{ result.offers_source }} | <strong>Anzahl Angebote:</strong> {{ result.offers_count }}</p>
+  {% if result.import_warnings %}
+  <ul class="checks">
+    {% for warning in result.import_warnings %}
+    <li class="warn">{{ warning }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>1. Speiseplan (Mo-So)</h2>
+  <div class="days-grid">
+    {% for day in result.days %}
+    <article class="day-card">
+      <h3>{{ day.day_name }} <span>{{ day.date_value.isoformat() }}</span></h3>
+      <p><strong>Mittag:</strong> {{ day.lunch.title }} ({{ day.lunch.prep_minutes }} Min)<br><a href="{{ day.lunch.url }}" target="_blank" rel="noopener noreferrer">{{ day.lunch.source }}</a></p>
+      <p><strong>Abend:</strong> {{ day.dinner.title }} ({{ day.dinner.prep_minutes }} Min)<br><a href="{{ day.dinner.url }}" target="_blank" rel="noopener noreferrer">{{ day.dinner.source }}</a></p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>2. Einkaufsliste nach Geschaeften</h2>
+  <p class="muted">Mit Checkboxen, Angebotszeitraum und Verwendungszweck.</p>
+  {% for store, entries in result.shopping_by_store.items() %}
+    {% if entries %}
+    <details class="store-block" open>
+      <summary>{{ store.value }} ({{ entries|length }} Artikel)</summary>
+      <ul class="shopping-list">
+        {% for entry in entries %}
+        <li>
+          <label>
+            <input type="checkbox">
+            <span class="item">{{ entry.ingredient }} - {{ entry.amount }}</span>
+          </label>
+          <small>
+            {{ "%.2f"|format(entry.sale_price_eur) }} EUR
+            {% if entry.valid_from and entry.valid_to %}
+            | gueltig: {{ entry.valid_from.isoformat() }} bis {{ entry.valid_to.isoformat() }}
+            {% endif %}
+            | fuer: {{ entry.used_for|join(", ") }}
+          </small>
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+  {% endfor %}
+</section>
+
+<section class="panel metrics">
+  <h2>3. Kosten und Ersparnis</h2>
+  <div class="metrics-grid">
+    <div class="metric">
+      <h3>Wochensumme</h3>
+      <p>{{ "%.2f"|format(result.metrics.weekly_cost_eur) }} EUR</p>
+    </div>
+    <div class="metric">
+      <h3>Ohne Angebote</h3>
+      <p>{{ "%.2f"|format(result.metrics.weekly_regular_cost_eur) }} EUR</p>
+    </div>
+    <div class="metric">
+      <h3>Ersparnis</h3>
+      <p>{{ "%.2f"|format(result.metrics.savings_eur) }} EUR ({{ "%.1f"|format(result.metrics.savings_pct) }}%)</p>
+    </div>
+    <div class="metric">
+      <h3>Angebotsnutzung</h3>
+      <p>{{ "%.1f"|format(result.metrics.offer_usage_pct) }}%</p>
+    </div>
+  </div>
+  <p class="budget-note {% if result.metrics.weekly_cost_eur < result.metrics.budget_min_eur or result.metrics.weekly_cost_eur > result.metrics.budget_max_eur %}warn{% else %}ok{% endif %}">
+    Zielbudget: {{ "%.0f"|format(result.metrics.budget_min_eur) }} - {{ "%.0f"|format(result.metrics.budget_max_eur) }} EUR
+  </p>
+</section>
+
+<section class="panel">
+  <h2>4. Vorschau naechste Angebote</h2>
+  <ul>
+    {% for offer in result.preview_offers %}
+    <li>{{ offer.store.value }}: {{ offer.name }} - {{ "%.2f"|format(offer.sale_price_eur) }} EUR ({{ offer.valid_from.isoformat() }} bis {{ offer.valid_to.isoformat() }})</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>5. Einkaufs-Tipps und Route</h2>
+  <ol>
+    <li>Netto fuer Gemuese und schnelle Basisprodukte zuerst.</li>
+    <li>Aldi Sued fuer Vorrat (Reis, Konserven, Eier).</li>
+    <li>Lidl fuer Milchprodukte und Gefluegel.</li>
+    <li>Kaufland am Ende fuer Fleisch/Fisch-Aktionen und Restartikel.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>Qualitaetschecks</h2>
+  <ul class="checks">
+    {% for check_name, is_ok in result.quality_checks.items() %}
+    <li class="{% if is_ok %}ok{% else %}warn{% endif %}">
+      {% if is_ok %}OK{% else %}NICHT OK{% endif %}: {{ check_name }}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Markdown-Export</h2>
+  <p class="muted">Zum direkten Kopieren in Notizen, Messenger oder E-Mail.</p>
+  <button id="copy-markdown" class="btn-secondary" type="button">Markdown kopieren</button>
+  <textarea id="markdown-output" rows="18" readonly>{{ markdown_output }}</textarea>
+</section>
+{% endif %}
+{% endblock %}
