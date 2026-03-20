@@ -1,0 +1,95 @@
+name: AI PR Review
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  gemini-review:
+    name: Gemini Review
+    if: (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false) && secrets.GEMINI_API_KEY != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+      AI_PROVIDER: gemini
+      AI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      AI_MODEL: ${{ vars.GEMINI_REVIEW_MODEL }}
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.ref || github.ref_name }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install review script dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run Gemini review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/ai_pr_reviewer.py
+
+  openai-review:
+    name: OpenAI Review
+    if: (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false) && secrets.OPENAI_API_KEY != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+      AI_PROVIDER: openai
+      AI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AI_MODEL: ${{ vars.OPENAI_REVIEW_MODEL }}
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.ref || github.ref_name }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install review script dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run OpenAI review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/ai_pr_reviewer.py
