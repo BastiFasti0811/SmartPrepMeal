@@ -68,6 +68,12 @@ python -m app.automation --output-dir exports --offer-mode auto
 - Einfaches In-Memory Rate Limiting
 - Serverseitige Input-Validierung
 
+## Kostenlose Security-Automation (GitHub)
+
+- Dependabot Updates: `.github/dependabot.yml`
+- CodeQL SAST Scan: `.github/workflows/codeql.yml`
+- CI Test-Gate: `.github/workflows/ci.yml`
+
 ## UX-Verbesserungen im MVP
 
 - Mobile-taugliches, klares Formular
@@ -86,3 +92,8 @@ Der Importer verwendet pro Markt eine eigene Strategie:
 - Lidl: eingebettete Produkt/Preis-Daten der Startseite
 
 Wenn Live-Daten fehlen oder ein Parser ausfaellt, erfolgt automatisch ein Fallback auf Seed-Angebote.
+
+## AI Review Setup
+
+- Gemini Styleguide: `.gemini/styleguide.md`
+- Setup-Hinweise: `docs/ai-review-setup.md`
