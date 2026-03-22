@@ -6,17 +6,21 @@
   <title>{% block title %}SmartMeal Weekly Planner{% endblock %}</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body>
+<body class="app-shell">
   <a href="#main-content" class="skip-link">Direkt zum Inhalt</a>
   <header class="site-header">
-    <div class="wrap">
+    <div class="wrap header-grid">
+      <p class="eyebrow">Smart Prep Family Kitchen</p>
       <h1>SmartMeal Weekly Planner</h1>
-      <p>Woechentliche Essensplanung mit Angebotsfokus, Familien-Budget und No-Pork-Regel.</p>
+      <p class="lead">Woechentliche Essensplanung mit Angebotsfokus, Familien-Budget und No-Pork-Regel.</p>
     </div>
   </header>
-  <main id="main-content" class="wrap">
+  <main id="main-content" class="wrap main-shell">
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer wrap">
+    <p>SmartMeal MVP - Angebotsplanung fuer Familien</p>
+  </footer>
   <script src="/static/app.js" defer></script>
 </body>
 </html>

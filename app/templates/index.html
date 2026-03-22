@@ -1,31 +1,162 @@
 {% extends "base.html" %}
 {% block title %}SmartMeal Planner{% endblock %}
 {% block content %}
-<section class="panel">
-  <h2>Plan konfigurieren</h2>
+<section class="panel panel-config">
+  <div class="section-top">
+    <p class="kicker">Plan Setup</p>
+    <h2>Plan konfigurieren</h2>
+    <p class="muted">Lege Haushalt, Budget und Woche fest. Danach erstellen wir einen klaren Wochenplan mit Angebotsfokus.</p>
+  </div>
+
   <form action="/plan" method="post" class="grid-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <label for="family_size">Personenanzahl</label>
-    <input id="family_size" name="family_size" type="number" min="1" max="8" value="{{ defaults.family_size }}" required>
+    <div class="form-grid">
+      <label class="field" for="family_size">
+        <span class="field-label">Personenanzahl</span>
+        <input id="family_size" name="family_size" type="number" min="1" max="8" value="{{ defaults.family_size }}" required>
+        <small>1 bis 8 Personen</small>
+      </label>
 
-    <label for="budget_min">Budget min (EUR)</label>
-    <input id="budget_min" name="budget_min" type="number" min="10" max="300" step="1" value="{{ defaults.budget_min }}" required>
+      <label class="field" for="week_start">
+        <span class="field-label">Wochenstart (Montag)</span>
+        <input id="week_start" name="week_start" type="date" value="{{ defaults.week_start }}" required>
+        <small>Start immer auf Montag setzen</small>
+      </label>
 
-    <label for="budget_max">Budget max (EUR)</label>
-    <input id="budget_max" name="budget_max" type="number" min="10" max="300" step="1" value="{{ defaults.budget_max }}" required>
+      <label class="field" for="budget_min">
+        <span class="field-label">Budget min (EUR)</span>
+        <input id="budget_min" name="budget_min" type="number" min="10" max="300" step="1" value="{{ defaults.budget_min }}" required>
+        <small>Untergrenze fuer den Wocheneinkauf</small>
+      </label>
 
-    <label for="week_start">Wochenstart (Montag)</label>
-    <input id="week_start" name="week_start" type="date" value="{{ defaults.week_start }}" required>
+      <label class="field" for="budget_max">
+        <span class="field-label">Budget max (EUR)</span>
+        <input id="budget_max" name="budget_max" type="number" min="10" max="300" step="1" value="{{ defaults.budget_max }}" required>
+        <small>Obergrenze fuer den Wocheneinkauf</small>
+      </label>
 
-    <label for="offer_mode">Angebotsquelle</label>
-    <select id="offer_mode" name="offer_mode">
-      <option value="auto" {% if defaults.offer_mode == "auto" %}selected{% endif %}>Auto (Live + Fallback)</option>
-      <option value="live" {% if defaults.offer_mode == "live" %}selected{% endif %}>Nur Live</option>
-      <option value="seed" {% if defaults.offer_mode == "seed" %}selected{% endif %}>Nur Seed (Offline)</option>
-    </select>
+      <label class="field field-wide" for="offer_mode">
+        <span class="field-label">Angebotsquelle</span>
+        <select id="offer_mode" name="offer_mode">
+          <option value="auto" {% if defaults.offer_mode == "auto" %}selected{% endif %}>Auto (Live + Fallback)</option>
+          <option value="live" {% if defaults.offer_mode == "live" %}selected{% endif %}>Nur Live</option>
+          <option value="seed" {% if defaults.offer_mode == "seed" %}selected{% endif %}>Nur Seed (Offline)</option>
+        </select>
+      </label>
 
-    <fieldset>
+      <label class="field field-wide" for="region">
+        <span class="field-label">Region</span>
+        <select id="region" name="region">
+          {% for region_value, region_label in region_options %}
+          <option value="{{ region_value }}" {% if defaults.region == region_value %}selected{% endif %}>{{ region_label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="stores-fieldset">
+      <legend>Haushaltszusammensetzung</legend>
+      <div class="preset-row" aria-label="Schnellvorlagen Haushalt">
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="single"
+          data-adults="1"
+          data-teenagers="0"
+          data-children="0"
+          data-toddlers="0"
+          data-babies="0"
+        >
+          1 Erw.
+        </button>
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="couple"
+          data-adults="2"
+          data-teenagers="0"
+          data-children="0"
+          data-toddlers="0"
+          data-babies="0"
+        >
+          2 Erw.
+        </button>
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="small-family"
+          data-adults="2"
+          data-teenagers="0"
+          data-children="1"
+          data-toddlers="0"
+          data-babies="0"
+        >
+          2 Erw. + 1 Kind
+        </button>
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="family-plus"
+          data-adults="2"
+          data-teenagers="0"
+          data-children="2"
+          data-toddlers="0"
+          data-babies="0"
+        >
+          2 Erw. + 2 Kinder
+        </button>
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="with-toddler"
+          data-adults="2"
+          data-teenagers="0"
+          data-children="1"
+          data-toddlers="1"
+          data-babies="0"
+        >
+          2 Erw. + 1 Kind + 1 Kleink.
+        </button>
+        <button
+          type="button"
+          class="preset-btn"
+          data-preset="with-baby"
+          data-adults="2"
+          data-teenagers="0"
+          data-children="0"
+          data-toddlers="1"
+          data-babies="1"
+        >
+          2 Erw. + Baby Mix
+        </button>
+      </div>
+      <div class="household-grid">
+        <label class="field" for="adults">
+          <span class="field-label">Erwachsene</span>
+          <input id="adults" name="adults" type="number" min="0" max="8" value="{{ defaults.adults }}" inputmode="numeric">
+        </label>
+        <label class="field" for="teenagers">
+          <span class="field-label">Jugendliche</span>
+          <input id="teenagers" name="teenagers" type="number" min="0" max="8" value="{{ defaults.teenagers }}" inputmode="numeric">
+        </label>
+        <label class="field" for="children">
+          <span class="field-label">Kinder</span>
+          <input id="children" name="children" type="number" min="0" max="8" value="{{ defaults.children }}" inputmode="numeric">
+        </label>
+        <label class="field" for="toddlers">
+          <span class="field-label">Kleinkinder</span>
+          <input id="toddlers" name="toddlers" type="number" min="0" max="8" value="{{ defaults.toddlers }}" inputmode="numeric">
+        </label>
+        <label class="field" for="babies">
+          <span class="field-label">Babys</span>
+          <input id="babies" name="babies" type="number" min="0" max="8" value="{{ defaults.babies }}" inputmode="numeric">
+        </label>
+      </div>
+      <p class="muted household-hint">Gesamt laut Zusammensetzung: <strong id="composition-total">{{ defaults.adults + defaults.teenagers + defaults.children + defaults.toddlers + defaults.babies }}</strong></p>
+    </fieldset>
+
+    <fieldset class="stores-fieldset">
       <legend>Bevorzugte Geschaefte</legend>
       <div class="stores">
         {% for store in store_options %}
@@ -37,17 +168,56 @@
       </div>
     </fieldset>
 
-    <button type="submit" class="btn-primary">Wochenplan erstellen</button>
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Wochenplan erstellen</button>
+      <p class="muted inline-hint">Tipp: Ein enger Budgetkorridor ergibt stabilere Einkaufslisten.</p>
+    </div>
+    <div class="save-tools" aria-label="Formularauswahl speichern">
+      <button id="save-config" class="btn-tertiary" type="button">Auswahl speichern</button>
+      <button id="load-config" class="btn-tertiary" type="button">Gespeicherte laden</button>
+      <button id="reset-config" class="btn-tertiary subtle" type="button">Speicher loeschen</button>
+      <p id="config-status" class="muted inline-hint" aria-live="polite"></p>
+    </div>
   </form>
+
   {% if error %}
-  <p class="error" role="alert">{{ error }}</p>
+  <p class="alert-error" role="alert">{{ error }}</p>
   {% endif %}
 </section>
 
 {% if result %}
-<section class="panel">
-  <h2>Angebotsimport</h2>
-  <p><strong>Quelle:</strong> {{ result.offers_source }} | <strong>Anzahl Angebote:</strong> {{ result.offers_count }}</p>
+<section class="panel panel-summary">
+  <div class="section-top">
+    <p class="kicker">Ergebnis</p>
+    <h2>Wochenuebersicht</h2>
+    <p class="muted">Quelle: <strong>{{ result.offers_source }}</strong> - Angebote gefunden: <strong>{{ result.offers_count }}</strong></p>
+    <p class="muted">Region: <strong>{{ result.region }}</strong> - Haushalt: <strong>{{ result.household.adults }} Erw., {{ result.household.teenagers }} Jug., {{ result.household.children }} Kind., {{ result.household.toddlers }} Kleink., {{ result.household.babies }} Baby</strong></p>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric metric-strong">
+      <h3>Wochensumme</h3>
+      <p>{{ "%.2f"|format(result.metrics.weekly_cost_eur) }} EUR</p>
+    </div>
+    <div class="metric">
+      <h3>Ohne Angebote</h3>
+      <p>{{ "%.2f"|format(result.metrics.weekly_regular_cost_eur) }} EUR</p>
+    </div>
+    <div class="metric">
+      <h3>Ersparnis</h3>
+      <p>{{ "%.2f"|format(result.metrics.savings_eur) }} EUR</p>
+      <small>{{ "%.1f"|format(result.metrics.savings_pct) }}%</small>
+    </div>
+    <div class="metric">
+      <h3>Angebotsnutzung</h3>
+      <p>{{ "%.1f"|format(result.metrics.offer_usage_pct) }}%</p>
+    </div>
+  </div>
+
+  <p class="budget-note {% if result.metrics.weekly_cost_eur < result.metrics.budget_min_eur or result.metrics.weekly_cost_eur > result.metrics.budget_max_eur %}warn{% else %}ok{% endif %}">
+    Zielbudget: {{ "%.0f"|format(result.metrics.budget_min_eur) }} - {{ "%.0f"|format(result.metrics.budget_max_eur) }} EUR
+  </p>
+
   {% if result.import_warnings %}
   <ul class="checks">
     {% for warning in result.import_warnings %}
@@ -58,21 +228,32 @@
 </section>
 
 <section class="panel">
-  <h2>1. Speiseplan (Mo-So)</h2>
+  <div class="section-top">
+    <p class="kicker">Speiseplan</p>
+    <h2>7 Tage (Mo-So)</h2>
+  </div>
   <div class="days-grid">
     {% for day in result.days %}
     <article class="day-card">
       <h3>{{ day.day_name }} <span>{{ day.date_value.isoformat() }}</span></h3>
-      <p><strong>Mittag:</strong> {{ day.lunch.title }} ({{ day.lunch.prep_minutes }} Min)<br><a href="{{ day.lunch.url }}" target="_blank" rel="noopener noreferrer">{{ day.lunch.source }}</a></p>
-      <p><strong>Abend:</strong> {{ day.dinner.title }} ({{ day.dinner.prep_minutes }} Min)<br><a href="{{ day.dinner.url }}" target="_blank" rel="noopener noreferrer">{{ day.dinner.source }}</a></p>
+      <p>
+        <strong>Mittag:</strong> {{ day.lunch.title }} ({{ day.lunch.prep_minutes }} Min)<br>
+        <a href="{{ day.lunch.url }}" target="_blank" rel="noopener noreferrer">{{ day.lunch.source }}</a>
+      </p>
+      <p>
+        <strong>Abend:</strong> {{ day.dinner.title }} ({{ day.dinner.prep_minutes }} Min)<br>
+        <a href="{{ day.dinner.url }}" target="_blank" rel="noopener noreferrer">{{ day.dinner.source }}</a>
+      </p>
     </article>
     {% endfor %}
   </div>
 </section>
 
 <section class="panel">
-  <h2>2. Einkaufsliste nach Geschaeften</h2>
-  <p class="muted">Mit Checkboxen, Angebotszeitraum und Verwendungszweck.</p>
+  <div class="section-top">
+    <p class="kicker">Einkauf</p>
+    <h2>Liste nach Geschaeften</h2>
+  </div>
   {% for store, entries in result.shopping_by_store.items() %}
     {% if entries %}
     <details class="store-block" open>
@@ -99,52 +280,37 @@
   {% endfor %}
 </section>
 
-<section class="panel metrics">
-  <h2>3. Kosten und Ersparnis</h2>
-  <div class="metrics-grid">
-    <div class="metric">
-      <h3>Wochensumme</h3>
-      <p>{{ "%.2f"|format(result.metrics.weekly_cost_eur) }} EUR</p>
+<section class="panel split-panel">
+  <div>
+    <div class="section-top compact">
+      <p class="kicker">Vorschau</p>
+      <h2>Naechste Angebote</h2>
     </div>
-    <div class="metric">
-      <h3>Ohne Angebote</h3>
-      <p>{{ "%.2f"|format(result.metrics.weekly_regular_cost_eur) }} EUR</p>
-    </div>
-    <div class="metric">
-      <h3>Ersparnis</h3>
-      <p>{{ "%.2f"|format(result.metrics.savings_eur) }} EUR ({{ "%.1f"|format(result.metrics.savings_pct) }}%)</p>
-    </div>
-    <div class="metric">
-      <h3>Angebotsnutzung</h3>
-      <p>{{ "%.1f"|format(result.metrics.offer_usage_pct) }}%</p>
-    </div>
+    <ul class="plain-list">
+      {% for offer in result.preview_offers %}
+      <li>{{ offer.store.value }}: {{ offer.name }} - {{ "%.2f"|format(offer.sale_price_eur) }} EUR ({{ offer.valid_from.isoformat() }} bis {{ offer.valid_to.isoformat() }})</li>
+      {% endfor %}
+    </ul>
   </div>
-  <p class="budget-note {% if result.metrics.weekly_cost_eur < result.metrics.budget_min_eur or result.metrics.weekly_cost_eur > result.metrics.budget_max_eur %}warn{% else %}ok{% endif %}">
-    Zielbudget: {{ "%.0f"|format(result.metrics.budget_min_eur) }} - {{ "%.0f"|format(result.metrics.budget_max_eur) }} EUR
-  </p>
+  <div>
+    <div class="section-top compact">
+      <p class="kicker">Route</p>
+      <h2>Einkaufs-Tipps</h2>
+    </div>
+    <ol class="plain-list">
+      <li>Netto fuer Gemuese und schnelle Basisprodukte zuerst.</li>
+      <li>Aldi Sued fuer Vorrat (Reis, Konserven, Eier).</li>
+      <li>Lidl fuer Milchprodukte und Gefluegel.</li>
+      <li>Kaufland am Ende fuer Fleisch/Fisch-Aktionen und Restartikel.</li>
+    </ol>
+  </div>
 </section>
 
 <section class="panel">
-  <h2>4. Vorschau naechste Angebote</h2>
-  <ul>
-    {% for offer in result.preview_offers %}
-    <li>{{ offer.store.value }}: {{ offer.name }} - {{ "%.2f"|format(offer.sale_price_eur) }} EUR ({{ offer.valid_from.isoformat() }} bis {{ offer.valid_to.isoformat() }})</li>
-    {% endfor %}
-  </ul>
-</section>
-
-<section class="panel">
-  <h2>5. Einkaufs-Tipps und Route</h2>
-  <ol>
-    <li>Netto fuer Gemuese und schnelle Basisprodukte zuerst.</li>
-    <li>Aldi Sued fuer Vorrat (Reis, Konserven, Eier).</li>
-    <li>Lidl fuer Milchprodukte und Gefluegel.</li>
-    <li>Kaufland am Ende fuer Fleisch/Fisch-Aktionen und Restartikel.</li>
-  </ol>
-</section>
-
-<section class="panel">
-  <h2>Qualitaetschecks</h2>
+  <div class="section-top compact">
+    <p class="kicker">Validierung</p>
+    <h2>Qualitaetschecks</h2>
+  </div>
   <ul class="checks">
     {% for check_name, is_ok in result.quality_checks.items() %}
     <li class="{% if is_ok %}ok{% else %}warn{% endif %}">
@@ -155,8 +321,11 @@
 </section>
 
 <section class="panel">
-  <h2>Markdown-Export</h2>
-  <p class="muted">Zum direkten Kopieren in Notizen, Messenger oder E-Mail.</p>
+  <div class="section-top compact">
+    <p class="kicker">Export</p>
+    <h2>Markdown</h2>
+    <p class="muted">Zum direkten Kopieren in Notizen, Messenger oder E-Mail.</p>
+  </div>
   <button id="copy-markdown" class="btn-secondary" type="button">Markdown kopieren</button>
   <textarea id="markdown-output" rows="18" readonly>{{ markdown_output }}</textarea>
 </section>
